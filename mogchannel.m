@@ -100,6 +100,11 @@ classdef mogchannel < handle
             self.parent.cmd('%s,%d,pow',onoff(self.amplifier),self.channel);
         end
         
+        function self = write(self,varargin)
+            self.set(varargin{:});
+            self.upload;
+        end
+        
         function self = read(self)
             self.readFreq;
             self.readPow;
