@@ -67,25 +67,31 @@ classdef mogtable < handle
         end
         
         function self = upload(self)
-            self.reduce;
-            self.parent.cmd('mode,%d,%s',self.channel,'TSB');
-            self.parent.cmd('table,clear,%d',self.channel);
-            dt = diff(self.dataToWrite(:,1));
-            dt = dt(:);
-            dt(end+1) = 10e-6; %#ok<*NASGU>
-            N = numel(dt);
-            if N > 8191
-                error('Maximum number of table entries is 8191');
+            if numel(self) > 1
+                for nn = 1:numel(self)
+                    self(nn).upload;
+                end
+            else
+                self.reduce;
+                self.parent.cmd('mode,%d,%s',self.channel,'TSB');
+                self.parent.cmd('table,clear,%d',self.channel);
+                dt = diff(self.dataToWrite(:,1));
+                dt = dt(:);
+                dt(end+1) = 10e-6; %#ok<*NASGU>
+                N = numel(dt);
+                if N > 8191
+                    error('Maximum number of table entries is 8191');
+                end
+                for nn = 1:N
+                    f = self.dataToWrite(nn,3);
+                    p = self.dataToWrite(nn,2);
+                    ph = self.dataToWrite(nn,4);
+                    self.parent.cmd('table,append,%d,%.6f,%.4f,%.6f,%d',...
+                        self.channel,f,p,ph,round(dt(nn)*1e6));
+                end
+                self.parent.cmd('table,arm,%d',self.channel);
+                self.parent.cmd('table,rearm,%d,on',self.channel);
             end
-            for nn = 1:N
-                f = self.dataToWrite(nn,3);
-                p = self.dataToWrite(nn,2);
-                ph = self.dataToWrite(nn,4);
-                self.parent.cmd('table,append,%d,%.6f,%.4f,%.6f,%d',...
-                    self.channel,f,p,ph,round(dt(nn)*1e6));
-            end
-            self.parent.cmd('table,arm,%d',self.channel);
-            self.parent.cmd('table,rearm,%d,on',self.channel);
         end
         
         function self = start(self)
