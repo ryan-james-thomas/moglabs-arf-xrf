@@ -19,7 +19,7 @@ classdef mogchannel < handle
     properties(Constant)
         FREQ_BITS = 32;
         CLK = 1e3;  %In MHz, so 1 GHz
-        MODES = {'NSB','NSA','TSB'};
+        MODE = 'NSB';
     end
     
     methods
@@ -35,7 +35,6 @@ classdef mogchannel < handle
             self.freq = 110;
             self.pow = 30;
             self.phase = 0;
-            self.mode = 'NSB';
             self.amplifier = 1;
             self.signal = 0;
         end
@@ -53,8 +52,6 @@ classdef mogchannel < handle
                             self.pow = v;
                         case 'phase'
                             self.phase = v;
-                        case 'mode'
-                            self.mode = v;
                         case 'signal'
                             self.signal = v;
                         case 'amplifier'
@@ -76,25 +73,14 @@ classdef mogchannel < handle
                 error('Power %.2f is out of range',self.pow);
             end
             %Wrap phase
-            self.phase = mod(self.phase,360);
-            %Check mode
-            r = false;
-            for nn = 1:numel(self.MODES)
-                if strcmpi(self.mode,self.MODES{nn})
-                    r = true;
-                end
-            end
-            if ~r
-                error('Mode %s is not supported!',self.mode);
-            end
-            
+            self.phase = mod(self.phase,360);            
         end
         
         function self = upload(self)
             self.check;
+            self.parent.cmd('mode,%d,%s',self.channel,self.MODE);
             self.parent.cmd('freq,%d,%.6fMHz',self.channel,self.freq);
             self.parent.cmd('pow,%d,%.3fdBm',self.channel,self.pow);
-            self.parent.cmd('mode,%d,%s',self.channel,self.mode);
             self.parent.cmd('phase,%d,%.6fdeg',self.channel,self.phase);
             self.parent.cmd('%s,%d,sig',onoff(self.signal),self.channel);
             self.parent.cmd('%s,%d,pow',onoff(self.amplifier),self.channel);
@@ -106,9 +92,9 @@ classdef mogchannel < handle
         end
         
         function self = read(self)
+            self.parent.cmd('mode,%d,%s',self.channel,self.MODE);
             self.readFreq;
             self.readPow;
-            self.readMode;
             self.readPhase;
             self.readStatus;
         end
@@ -126,11 +112,11 @@ classdef mogchannel < handle
             self.pow = r;
         end
         
-        function r = readMode(self)
-            r = self.parent.ask('mode,%d',self.channel);
-            r = regexp(r,'(?<=\()\w+','match');
-            self.mode = r{1};
-        end
+%         function r = readMode(self)
+%             r = self.parent.ask('mode,%d',self.channel);
+%             r = regexp(r,'(?<=\()\w+','match');
+%             self.mode = r{1};
+%         end
         
         function r = readPhase(self)
             r = self.parent.ask('phase,%d',self.channel);
