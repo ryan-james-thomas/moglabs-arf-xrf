@@ -16,7 +16,10 @@ classdef InterferometerPulses < handle
         T
         dt
         finalphase
+        pi2power
         pipower
+        braggpower
+        chirp
         rfscale
         
         t
@@ -38,6 +41,7 @@ classdef InterferometerPulses < handle
             self.parent = parent;
             self.tb = mogtable(self.parent,1);
             self.tb(2) = mogtable(self.parent,2);
+            self.setDefaults;
             if nargin > 1
                 self.setAtom(atom);
             end
@@ -50,8 +54,12 @@ classdef InterferometerPulses < handle
             self.t0 = 500e-6;
             self.T = 1e-3;
             self.dt = 0;
+            self.width = 50e-6;
+            self.pi2power = 0.05;
             self.pipower = 0.1;
+            self.braggpower = [0.05,0.1,0.05];
             self.finalphase = 0;
+            self.chirp = 2*self.k*self.g/(2*pi);
         end
         
         function self = setAtom(self,atom)
@@ -84,15 +92,50 @@ classdef InterferometerPulses < handle
                             self.width = v;
                         case 'finalphase'
                             self.finalphase = v;
+                        case 'pi2power'
+                            self.pi2power = v;
                         case 'pipower'
                             self.pipower = v;
                         case 'rfscale'
                             self.rfscale = v;
+                        case 'braggpower'
+                            self.braggpower = v;
+                        case 'chirp'
+                            self.chirp = v;
                         otherwise
                             error('Option %s not supported!',varargin{nn});
                     end
                 end
             end
+        end
+        
+        function self = makeSinglePulse(self,P,varargin)
+            %Set variables
+            self.set(varargin{:});
+            %Reset arrays
+            self.t = [];
+            self.freq = [];
+            self.pow = [];
+            self.phase = [];
+            
+            %Generate time vector
+            min_t = 0;
+            max_t = self.t0+5*self.width;
+            self.t = (min_t:1e-6:max_t)';
+            %Create series of gaussian pulses
+            self.pow = P*self.gauss(self.t,self.t0,self.width);
+            self.pow(:,2) = self.pow(:,1);
+            
+            %Set phases
+            self.phase = zeros(numel(self.t),2);
+            
+            %Set frequencies with frequency chirp
+            self.freq(:,1) = self.DEFAULT_FREQ*ones(size(self.t));
+            self.freq(:,2) = self.freq(:,1) + 0.5*self.chirp*self.t/(1e6)...
+                + 0.5*4*self.recoil/1e6;
+            
+            %Create mogtable entries
+            self.makeTables;
         end
         
         function self = makePulses(self,varargin)
@@ -106,12 +149,15 @@ classdef InterferometerPulses < handle
             
             %Generate time vector
             min_t = 0;
-            max_t = self.t0+2*self.T+5*self.width;
+            max_t = self.t0+2*self.T+self.dt+5*self.width;
             self.t = (min_t:1e-6:max_t)';
             %Create series of gaussian pulses
-            self.pow = self.pipower*(0.5*self.gauss(self.t,self.t0,self.width)...
-                + self.gauss(self.t,self.t0+self.T,self.width)...
-                + 0.5*self.gauss(self.t,self.t0+2*self.T+self.dt,self.width));
+%             self.pow = self.pi2power*self.gauss(self.t,self.t0,self.width)...
+%                 + self.pipower*self.gauss(self.t,self.t0+self.T,self.width)...
+%                 + self.pi2power*self.gauss(self.t,self.t0+2*self.T+self.dt,self.width);
+            self.pow = self.braggpower(1)*self.gauss(self.t,self.t0,self.width)...
+                + self.braggpower(2)*self.gauss(self.t,self.t0+self.T,self.width)...
+                + self.braggpower(3)*self.gauss(self.t,self.t0+2*self.T+self.dt,self.width);
             
             self.pow(:,2) = self.pow(:,1);
             
@@ -122,7 +168,7 @@ classdef InterferometerPulses < handle
             %Set frequencies with frequency chirp
             self.freq(:,1) = self.DEFAULT_FREQ*ones(size(self.t));
             self.freq(:,2) = self.freq(:,1) + 0.5*2*self.k*self.g*self.t/(2*pi*1e6)...
-                + 4*self.recoil/1e6;
+                + 0.5*4*self.recoil/1e6;
             
             %Create mogtable entries
             self.makeTables;
@@ -140,6 +186,13 @@ classdef InterferometerPulses < handle
         
         function self = upload(self)
             self.tb.upload;
+        end
+        
+        function s = struct(self)
+            s = struct('mass',self.mass,'k',self.k,'recoil',self.recoil,...
+                'width',self.width,'t0',self.t0,'T',self.T,'dt',self.dt,...
+                'finalphase',self.finalphase,'pi2power',self.pi2power,...
+                'pipower',self.pipower,'rfscale',self.rfscale);
         end
         
     end
