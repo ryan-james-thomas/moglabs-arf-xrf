@@ -78,15 +78,17 @@ classdef mogtable < handle
             end
         end
         
-        function self = upload(self)
+        function s = createTableString(self)
             if numel(self) > 1
+                s = {};
                 for nn = 1:numel(self)
-                    self(nn).upload;
+                    tmp = self(nn).createTableString;
+                    s = [s tmp];
                 end
             else
                 self.reduce;
-                self.parent.cmd('mode,%d,%s',self.channel,self.MODE);
-                self.parent.cmd('table,clear,%d',self.channel);
+                s{1} = sprintf('mode,%d,%s',self.channel,self.MODE);
+                s{2} = sprintf('table,clear,%d',self.channel);
                 dt = diff(self.dataToWrite(:,1));
                 dt = round(dt(:)*1e6);
                 dt(end+1) = 10; %#ok<*NASGU>
@@ -94,19 +96,22 @@ classdef mogtable < handle
                 if N > 8191
                     error('Maximum number of table entries is 8191');
                 end
-                
+
                 for nn = 1:N
                     f = self.dataToWrite(nn,3);
                     p = self.dataToWrite(nn,2);
                     ph = self.dataToWrite(nn,4);
-                    self.parent.cmd('table,append,%d,%.6f,%.4f,%.6f,%d',...
+                    s{nn+2} = sprintf('table,append,%d,%.6f,%.4f,%.6f,%d',...
                         self.channel,f,p,ph,dt(nn));
                 end
-%                 A = [self.channel*ones(numel(dt),1),self.dataToWrite(:,[3,2,4]),dt];
-%                 self.parent.send_raw(sprintf('table,append,%d,%.6f,%.4f,%.6f,%d\r\n',A'));
-                self.parent.cmd('table,arm,%d',self.channel);
-                self.parent.cmd('table,rearm,%d,on',self.channel);
+                s{end+1} = sprintf('table,arm,%d',self.channel);
+                s{end+1} = sprintf('table,rearm,%d,on',self.channel);
             end
+        end
+        
+        function self = upload(self)
+            commands = self.createTableString;
+            self(1).parent.uploadCommands(commands);
         end
         
         function self = start(self)
