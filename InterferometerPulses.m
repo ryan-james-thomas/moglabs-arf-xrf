@@ -192,7 +192,7 @@ classdef InterferometerPulses < handle
             end
             self.parent.cmd('table,sync,1');
             self.tb.upload;
-            self.tb.arm;
+%             self.tb.arm;
         end
         
         function s = struct(self)

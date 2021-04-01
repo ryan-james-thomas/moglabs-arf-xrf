@@ -17,7 +17,7 @@ classdef mogtable < handle
         FREQ_BITS = 32;
         CLK = 1e3;  %In MHz, so 1 GHz
         MODE = 'TSB';
-        POW_OFF_VALUE = -40;
+        POW_OFF_VALUE = -50;
         LOW_POW_THRESHOLD = -20;
     end
     
@@ -97,7 +97,7 @@ classdef mogtable < handle
                     s = [s tmp];
                 end
             else
-                self.reduce;
+%                 self.reduce;
                 dt = diff(self.dataToWrite(:,1));
                 dt = round(dt(:)*1e6);
                 dt(end+1) = 10; %#ok<*NASGU>
@@ -126,7 +126,7 @@ classdef mogtable < handle
         
         function self = upload(self)
             commands = self.createTableString;
-            self(1).parent.uploadCommands(commands);
+            self(1).parent.uploadCommands(commands(:));
         end
         
         function self = start(self)

@@ -138,7 +138,7 @@ classdef mogdevice < handle
                 end
             else
                 self.dev.BytesAvailableFcn = '';
-                fprintf(1,'Upload complete!\n');
+                fprintf(1,'Table upload complete - uploaded %d instructions!\n',self.idx-1);
             end
         end
         
