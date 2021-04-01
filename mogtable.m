@@ -89,17 +89,15 @@ classdef mogtable < handle
             end
         end
         
-        function self = upload(self)
+        function s = createTableString(self)
             if numel(self) > 1
+                s = {};
                 for nn = 1:numel(self)
-                    self(nn).upload;
+                    tmp = self(nn).createTableString;
+                    s = [s tmp];
                 end
             else
-%                 self.reduce;
-                self.parent.cmd('mode,%d,%s',self.channel,self.MODE);
-                self.parent.cmd('debounce,%d,off',self.channel);
-                self.parent.cmd('table,stop,%d',self.channel);
-                self.parent.cmd('table,clear,%d',self.channel);
+                self.reduce;
                 dt = diff(self.dataToWrite(:,1));
                 dt = round(dt(:)*1e6);
                 dt(end+1) = 10; %#ok<*NASGU>
@@ -107,24 +105,28 @@ classdef mogtable < handle
                 if N > 8191
                     error('Maximum number of table entries is 8191');
                 end
-%                 s = zeros(N,1);
+
+                s = cell(6 + N,1);
+                s{1} = sprintf('mode,%d,%s',self.channel,self.MODE);
+                s{2} = sprintf('debounce,%d,off',self.channel);
+                s{3} = sprintf('table,stop,%d',self.channel);
+                s{4} = sprintf('table,clear,%d',self.channel);
+                
                 for nn = 1:N
                     f = self.dataToWrite(nn,3);
                     p = self.dataToWrite(nn,2);
                     ph = self.dataToWrite(nn,4);
-%                     self.parent.send_raw(sprintf('table,append,%d,%.6f,%.4f,%.6f,%d\r\n',...
-%                         self.channel,f,p,ph,dt(nn)));
-%                     tic;
-                    self.parent.cmd('table,append,%d,%.6f,%.4f,%.6f,%d',...
+                    s{nn+4} = sprintf('table,append,%d,%.6f,%.4f,%.6f,%d',...
                         self.channel,f,p,ph,dt(nn));
-%                     s(nn) = toc;
                 end
-%                 A = [self.channel*ones(numel(dt),1),self.dataToWrite(:,[3,2,4]),dt];
-%                 self.parent.send_raw(sprintf('table,append,%d,%.6f,%.4f,%.6f,%d\r\n',A'));
-                self.parent.cmd('table,append,%d,%.6f,%.4f,%.6f,%d,%s',...
-                        self.channel,f,p,ph,dt(end),'off');
-                self.arm;
+                s{end-1} = sprintf('table,arm,%d',self.channel);
+                s{end} = sprintf('table,rearm,%d,on',self.channel);
             end
+        end
+        
+        function self = upload(self)
+            commands = self.createTableString;
+            self(1).parent.uploadCommands(commands);
         end
         
         function self = start(self)

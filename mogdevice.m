@@ -13,7 +13,20 @@ classdef mogdevice < handle
 	properties
 		dev;		% device object
 		cx = '';	% connection string
-	end
+    end
+    
+    properties(Access = protected,Hidden = true)
+        commands
+        idx
+        state
+    end
+    
+    properties(Constant,Hidden = true)
+        STATE_IDLE = 'idle';
+        STATE_SEND = 'sending';
+        STATE_RECV = 'receiving';
+    end
+    
 	methods
 		function addr = connect(obj, addr, port)
 			% connect to a MOG device: "addr" is either an IP address or the word "USB" or "COM"
@@ -90,6 +103,45 @@ classdef mogdevice < handle
                 delete(obj.dev);
             end
 			obj.cx = '';
-		end
+        end
+        
+        function uploadCommands(self,commands)
+            self.commands = commands;
+            self.idx = 1;
+            self.state = self.STATE_SEND;
+            self.dev.BytesAvailableFcn = @(src,event) self.handleAsync(src,event);
+            self.handleAsync;
+        end
+        
+        function handleAsync(self,~,~)
+            if strcmpi(self.state,self.STATE_SEND)
+                if self.idx <= numel(self.commands)
+                    self.send(self.commands{self.idx});
+                    self.idx = self.idx + 1;
+                    self.state = self.STATE_RECV;
+                else
+                    self.state = self.STATE_IDLE;
+                    self.handleAsync;
+                end
+            elseif strcmpi(self.state,self.STATE_RECV)
+                [resp,~,err] = fgets(self.dev);
+                if ~isempty(err) || strncmpi(resp(1:end-2),'ERR',3)
+                    self.state = self.STATE_IDLE;
+                    self.dev.BytesAvailableFcn = '';
+                    error(resp(6:end-2));
+                elseif self.idx <= numel(self.commands)
+                    self.state = self.STATE_SEND;
+                    self.handleAsync;
+                else
+                    self.state = self.STATE_IDLE;
+                    self.handleAsync;
+                end
+            else
+                self.dev.BytesAvailableFcn = '';
+                fprintf(1,'Upload complete!\n');
+            end
+        end
+        
+        
 	end
 end
