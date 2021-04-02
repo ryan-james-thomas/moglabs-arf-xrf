@@ -126,6 +126,11 @@ classdef mogtable < handle
         
         function self = upload(self)
             commands = self.createTableString;
+            commands = commands(:);
+            for nn = 1:2
+                commands{end+1} = sprintf('table,arm,%d',nn); %#ok<*AGROW>
+                commands{end+1} = sprintf('table,rearm,%d,on',nn);
+            end
             self(1).parent.uploadCommands(commands(:));
         end
         
