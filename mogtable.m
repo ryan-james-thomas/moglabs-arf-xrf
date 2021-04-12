@@ -79,7 +79,14 @@ classdef mogtable < handle
                     self.sync = false(N,1);
                     self.sync(1) = true;
                     for nn = 2:N
-                        if p2(nn) >= self.LOW_POW_THRESHOLD
+%                         self.dataToWrite(mm+1,:) = [t2(nn),p2(nn),f2(nn),ph2(nn)];
+%                         mm = mm + 1;
+%                         self.sync(nn) = true;
+                        if nn < N && p2(nn) >= self.LOW_POW_THRESHOLD && p2(nn+1) < self.LOW_POW_THRESHOLD
+                            self.dataToWrite(mm+1,:) = [t2(nn),self.POW_OFF_VALUE,f2(nn),ph2(nn)];
+                            mm = mm + 1;
+                            self.sync(nn) = true;
+                        elseif p2(nn) >= self.LOW_POW_THRESHOLD
                             self.dataToWrite(mm+1,:) = [t2(nn),p2(nn),f2(nn),ph2(nn)];
                             mm = mm + 1;
                             self.sync(nn) = true;
@@ -124,13 +131,14 @@ classdef mogtable < handle
             end
         end
         
-        function self = upload(self)
+        function numInstr = upload(self)
             commands = self.createTableString;
             commands = commands(:);
             for nn = 1:2
                 commands{end+1} = sprintf('table,arm,%d',nn); %#ok<*AGROW>
                 commands{end+1} = sprintf('table,rearm,%d,on',nn);
             end
+            numInstr = numel(commands);
             self(1).parent.uploadCommands(commands(:));
         end
         
