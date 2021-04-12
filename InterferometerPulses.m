@@ -168,13 +168,18 @@ classdef InterferometerPulses < handle
             self.phase = [];
             
             %Generate Bragg pulses
+            nPulses = numel(self.braggpower);
             min_t = 0;
-            max_t = self.t0+2*self.T+self.Tasym+5*self.width;
+            max_t = self.t0+(nPulses-1)*self.T+self.Tasym+5*self.width;
             self.t = (min_t:self.dt:max_t)';
             %Create series of gaussian pulses
-            self.pow = self.braggpower(1)*self.gauss(self.t,self.t0,self.width)...
-                + self.braggpower(2)*self.gauss(self.t,self.t0+self.T,self.width)...
-                + self.braggpower(3)*self.gauss(self.t,self.t0+2*self.T+self.Tasym,self.width);
+%             self.pow = self.braggpower(1)*self.gauss(self.t,self.t0,self.width)...
+%                 + self.braggpower(2)*self.gauss(self.t,self.t0+self.T,self.width)...
+%                 + self.braggpower(3)*self.gauss(self.t,self.t0+2*self.T+self.Tasym,self.width);
+            self.pow = zeros(size(self.t));
+            for nn = 1:nPulses
+                self.pow = self.pow + self.braggpower(nn)*self.gauss(self.t,self.t0+(nn-1)*self.T,self.width);
+            end
             
             self.pow(:,2) = self.pow(:,1);
             
