@@ -19,6 +19,7 @@ classdef mogdevice < handle
         commands
         idx
         state
+        uploadStartTime
     end
     
     properties(Constant,Hidden = true)
@@ -106,6 +107,7 @@ classdef mogdevice < handle
         end
         
         function uploadCommands(self,commands)
+            self.uploadStartTime = tic;
             self.commands = commands;
             self.idx = 1;
             self.state = self.STATE_SEND;
@@ -138,7 +140,8 @@ classdef mogdevice < handle
                 end
             else
                 self.dev.BytesAvailableFcn = '';
-                fprintf(1,'Upload complete!\n');
+                t = toc(self.uploadStartTime);
+                fprintf(1,'Table upload complete (%d instructions in %.1f s)\n',self.idx-1,t);
             end
         end
         
