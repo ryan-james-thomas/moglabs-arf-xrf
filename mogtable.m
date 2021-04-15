@@ -123,8 +123,13 @@ classdef mogtable < handle
                     f = self.dataToWrite(nn,3);
                     p = self.dataToWrite(nn,2);
                     ph = self.dataToWrite(nn,4);
-                    s{nn+4} = sprintf('table,append,%d,%.6f,%.4f,%.6f,%d',...
-                        self.channel,f,p,ph,dt(nn));
+                    if p > -45
+                        s{nn+4} = sprintf('table,append,%d,%.6f,%.4f,%.6f,%d',...
+                            self.channel,f,p,ph,dt(nn));
+                    else
+                        s{nn+4} = sprintf('table,append,%d,%.6f,0x%04x,%.6f,%d',...
+                            self.channel,f,0,ph,dt(nn));
+                    end
                 end
                 s{end-1} = sprintf('table,arm,%d',self.channel);
                 s{end} = sprintf('table,rearm,%d,on',self.channel);
