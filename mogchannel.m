@@ -10,6 +10,7 @@ classdef mogchannel < handle
         mode
         signal
         amplifier
+        powunits
     end
     
     properties(SetAccess = immutable)
@@ -29,6 +30,7 @@ classdef mogchannel < handle
             end
             self.parent = parent;
             self.channel = channel;
+            self.setDefaults;
         end
         
         function self = setDefaults(self)
@@ -37,6 +39,7 @@ classdef mogchannel < handle
             self.phase = 0;
             self.amplifier = 1;
             self.signal = 0;
+            self.powunits = 'dbm';
         end
         
         function self = set(self,varargin)
@@ -49,13 +52,15 @@ classdef mogchannel < handle
                         case 'freq'
                             self.freq = v;
                         case 'power'
-                            self.pow = v;
+                            self.pow = round(v);
                         case 'phase'
                             self.phase = v;
                         case 'signal'
                             self.signal = v;
                         case 'amplifier'
                             self.amplifier = v;
+                        case 'powunits'
+                            self.powunits = lower(v);
                         otherwise
                             error('Unknown property %s',varargin{nn});
                     end
@@ -69,8 +74,10 @@ classdef mogchannel < handle
                 error('Frequency %.6f MHz is out of range!',self.freq);
             end
             %Check power
-            if self.pow > 35.1
+            if strcmpi(self.powunits,'dbm') && self.pow > 35.1
                 error('Power %.2f is out of range',self.pow);
+            elseif strcmpi(self.powunits,'hex') && (self.pow > 2^16 || self.pow < 0)
+                error('Power %d is out of range',round(self.pow));
             end
             %Wrap phase
             self.phase = mod(self.phase,360);            
@@ -78,9 +85,13 @@ classdef mogchannel < handle
         
         function self = upload(self)
             self.check;
-            self.parent.cmd('mode,%d,%s',self.channel,self.MODE);
+%             self.parent.cmd('mode,%d,%s',self.channel,self.MODE);
             self.parent.cmd('freq,%d,%.6fMHz',self.channel,self.freq);
-            self.parent.cmd('pow,%d,%.3fdBm',self.channel,self.pow);
+            if strcmpi(self.powunits,'dbm')
+                self.parent.cmd('pow,%d,%.3fdBm',self.channel,self.pow);
+            elseif strcmpi(self.powunits,'hex')
+                self.parent.cmd('pow,%d,0x%04x',self.channel,round(self.pow));
+            end
             self.parent.cmd('phase,%d,%.6fdeg',self.channel,self.phase);
             self.parent.cmd('%s,%d,sig',onoff(self.signal),self.channel);
             self.parent.cmd('%s,%d,pow',onoff(self.amplifier),self.channel);
@@ -108,7 +119,12 @@ classdef mogchannel < handle
         
         function r = readPow(self)
             r = self.parent.ask('pow,%d',self.channel);
-            r = str2double(regexp(r,'^\d+\.\d+','match'));
+            if strcmpi(self.powunits,'dbm')
+                r = str2double(regexp(r,'(\+|\-)\d+\.\d+','match'));
+            elseif strcmpi(self.powunits,'hex')
+                s = regexp(r,'0x\w+','match');
+                r = hex2dec(s{1}(3:end));
+            end
             self.pow = r;
         end
         

@@ -1,3 +1,4 @@
 *.asv
 *example*.m
 *~
+*.mat
