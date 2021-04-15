@@ -94,9 +94,9 @@ classdef mogdevice < handle
 			% send a raw string to the device, and return number of bytes sent
 			fwrite(obj.dev, data);
             n = length(data);
-		end
-		function delete(obj)
-			% close the connection
+        end
+        function close(obj)
+            % closes the connection
             if isobject(obj.dev)
                 if strcmp(obj.dev.Status,'open')
                     fclose(obj.dev);
@@ -104,6 +104,10 @@ classdef mogdevice < handle
                 delete(obj.dev);
             end
 			obj.cx = '';
+        end
+		function delete(obj)
+			% close the connection
+            obj.close();
         end
         
         function uploadCommands(self,commands)
