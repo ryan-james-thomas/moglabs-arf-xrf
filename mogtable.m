@@ -143,6 +143,7 @@ classdef mogtable < handle
                 commands{end+1} = sprintf('table,arm,%d',nn); %#ok<*AGROW>
                 commands{end+1} = sprintf('table,rearm,%d,on',nn);
             end
+%             commands{end+1} = 'table,sync,1';
             numInstr = numel(commands);
             self(1).parent.uploadCommands(commands(:));
         end

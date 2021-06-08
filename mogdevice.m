@@ -146,9 +146,44 @@ classdef mogdevice < handle
                 self.dev.BytesAvailableFcn = '';
                 t = toc(self.uploadStartTime);
                 fprintf(1,'Table upload complete (%d instructions in %.1f s)\n',self.idx-1,t);
+                [R,err] = self.checkClocks;
+                if ~R
+                    warning('One or more clocks are unlocked: %s',err);
+                end
             end
         end
         
-        
+        function [R,err] = checkClocks(self)
+            %CHECKCLOCKS Checks the ARF clocks to ensure they are locked
+            %
+            %   [R,ERR] = MOG.CHECKCLOCKS() Checks to see if the ARF clocks
+            %   are locked. Returns R = TRUE if all clocks are locked, R =
+            %   FALSE if one is not locked, and ERR contains an error
+            %   message
+            s = self.ask('clkdiag');
+            s = strsplit(s,',');
+            R = true;
+            err = '';
+            for nn = 1:numel(s)
+                r = strfind(s{nn},'LOCKED');
+                if isempty(r)
+                    R = false;
+                    switch nn
+                        case 1
+                            err = sprintf('Reference clock unlocked: %s',s{nn});
+                        case 2
+                            err = sprintf('System clock unlocked: %s',s{nn});
+                        case 3
+                            err = sprintf('DDS clock unlocked: %s',s{nn});
+                        case 4
+                            err = sprintf('SYNC clock unlocked: %s',s{nn});
+                        otherwise
+                            err = sprintf('Unspecified clock unlocked: %s',s{nn});
+                    end
+                    break
+                end
+            end
+            
+        end
 	end
 end
