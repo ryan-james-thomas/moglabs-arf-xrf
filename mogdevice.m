@@ -97,7 +97,7 @@ classdef mogdevice < handle
         end
         function close(obj)
             % closes the connection
-            if isobject(obj.dev)
+            if isvalid(obj.dev)
                 if strcmp(obj.dev.Status,'open')
                     fclose(obj.dev);
                 end
@@ -146,10 +146,10 @@ classdef mogdevice < handle
                 self.dev.BytesAvailableFcn = '';
                 t = toc(self.uploadStartTime);
                 fprintf(1,'Table upload complete (%d instructions in %.1f s)\n',self.idx-1,t);
-                [R,err] = self.checkClocks;
-                if ~R
-                    warning('One or more clocks are unlocked: %s',err);
-                end
+%                 [R,err] = self.checkClocks;
+%                 if ~R
+%                     warning('One or more clocks are unlocked: %s',err);
+%                 end
             end
         end
         

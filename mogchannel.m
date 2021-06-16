@@ -11,6 +11,7 @@ classdef mogchannel < handle
         signal
         amplifier
         powunits
+        hasAmp
     end
     
     properties(SetAccess = immutable)
@@ -24,13 +25,18 @@ classdef mogchannel < handle
     end
     
     methods
-        function self = mogchannel(parent,channel)
+        function self = mogchannel(parent,channel,hasAmp)
             if ~isa(parent,'mogdevice')
                 error('Parent must be a ''mogdevice'' object!');
             end
             self.parent = parent;
             self.channel = channel;
             self.setDefaults;
+            if nargin > 2
+                self.hasAmp = hasAmp;
+            else
+                self.hasAmp = 1;
+            end
         end
         
         function self = setDefaults(self)
@@ -94,7 +100,9 @@ classdef mogchannel < handle
             end
             self.parent.cmd('phase,%d,%.6fdeg',self.channel,self.phase);
             self.parent.cmd('%s,%d,sig',onoff(self.signal),self.channel);
-            self.parent.cmd('%s,%d,pow',onoff(self.amplifier),self.channel);
+            if self.hasAmp
+                self.parent.cmd('%s,%d,pow',onoff(self.amplifier),self.channel);
+            end
         end
         
         function self = write(self,varargin)
