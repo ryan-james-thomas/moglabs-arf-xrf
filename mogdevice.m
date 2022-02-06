@@ -42,7 +42,7 @@ classdef mogdevice < handle
 				if nargin < 3
 					port = 7802;	% default port
 				end
-				obj.dev = tcpip(addr, port);
+				obj.dev = tcpip(addr, port,'InputBufferSize',2^20,'OutputBufferSize',2^20);
 				addr = sprintf('%s:%d',addr,port);
             end
 			obj.cx = addr;

@@ -58,7 +58,7 @@ classdef mogchannel < handle
                         case 'freq'
                             self.freq = v;
                         case 'power'
-                            self.pow = round(v);
+                            self.pow = v;
                         case 'phase'
                             self.phase = v;
                         case 'signal'
@@ -80,7 +80,7 @@ classdef mogchannel < handle
                 error('Frequency %.6f MHz is out of range!',self.freq);
             end
             %Check power
-            if strcmpi(self.powunits,'dbm') && self.pow > 35.1
+            if strcmpi(self.powunits,'dbm') && self.pow > 35.87
                 error('Power %.2f is out of range',self.pow);
             elseif strcmpi(self.powunits,'hex') && (self.pow > 2^16 || self.pow < 0)
                 error('Power %d is out of range',round(self.pow));
