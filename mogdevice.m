@@ -11,7 +11,7 @@
 %
 classdef mogdevice < handle
 	properties
-		dev;		% device object
+		dev;		% device selfect
 		cx = '';	% connection string
     end
     
@@ -29,85 +29,69 @@ classdef mogdevice < handle
     end
     
 	methods
-		function addr = connect(obj, addr, port)
+		function addr = connect(self, addr, port)
 			% connect to a MOG device: "addr" is either an IP address or the word "USB" or "COM"
 			if strcmp(addr,'USB') || strncmp(addr,'COM',3)
 				% connect to USB over virtual COM port
 				if nargin > 2
 					addr = sprintf('COM%d',port);
 				end
-				obj.dev = serial(addr);
+				self.dev = serial(addr);
 			else
 				% connect over ethernet using TCPIP
 				if nargin < 3
 					port = 7802;	% default port
 				end
-				obj.dev = tcpip(addr, port,'InputBufferSize',2^20,'OutputBufferSize',2^20);
+				self.dev = tcpclient(addr, port,'InputBufferSize',2^20,'OutputBufferSize',2^20);
+                self.dev.configureTerminator('CR/LF');
 				addr = sprintf('%s:%d',addr,port);
             end
-			obj.cx = addr;
-			fopen(obj.dev);
+			self.cx = addr;
 		end
-		function resp = ask(obj, varargin)
+		function resp = ask(self, varargin)
 			% ask the device a query, ensure the response is not "ERR"
-			flushinput(obj.dev);
-			obj.send(sprintf(varargin{:}));
-			resp = obj.recv();
-            resp = resp(1:end-2);
+			self.dev.flush('input');
+			self.send(sprintf(varargin{:}));
+			resp = self.recv();
 			if strncmp(resp,'ERR',3)
 				error(resp(6:end));
             end
 		end
-		function resp = cmd(obj, varargin)
+		function resp = cmd(self, varargin)
 			% send a command to the device, ensure the response is "OK"
-			resp = obj.ask(varargin{:});
+			resp = self.ask(varargin{:});
 			if ~strncmp(resp,'OK',2)
 				error('Device did not acknowledge command');
             end
             resp = resp(5:end);
 		end
-		function data = recv(obj)
+		function data = recv(self)
 			% receive a CRLF-terminated message
-            waitfor obj.dev.BytesAvailable > 0;
-            [data,~,err] = fgets(obj.dev);
-            if ~isempty(err)
-                error(err)
-            end
+            waitfor self.dev.BytesAvailable > 0;
+            data = self.dev.readline();
 		end
-		function data = recv_raw(obj,n)
+		function data = recv_raw(self,n)
 			% receive EXACTLY "n" bytes from the device
-			data = '';
-			while n > 0
-				[A,m] = fread(obj.dev, n);
-				n = n - m;
-				data = strcat(data,A);
-			end
+            data = char(self.dev.read(n));
 		end
-		function n = send(obj, data)
+		function n = send(self, data)
 			% send a string to the device, CRLF-terminate if necessary, and return number of bytes sent
-			if ~any(regexp(data,'\r\n$'))
-				data = sprintf('%s\r\n',data);
-			end
-			n = obj.send_raw(data);
+            data = regexprep(data,'\r\n$','');
+			n = self.dev.writeline(data);
 		end
-		function n = send_raw(obj, data)
+		function n = send_raw(self, data)
 			% send a raw string to the device, and return number of bytes sent
-			fwrite(obj.dev, data);
+			self.dev.write(data);
             n = length(data);
         end
-        function close(obj)
+        function close(self)
             % closes the connection
-            if isvalid(obj.dev)
-                if strcmp(obj.dev.Status,'open')
-                    fclose(obj.dev);
-                end
-                delete(obj.dev);
-            end
-			obj.cx = '';
+            self.dev = [];
+			self.cx = '';
         end
-		function delete(obj)
+		function delete(self)
 			% close the connection
-            obj.close();
+            self.close();
         end
         
         function uploadCommands(self,commands)
@@ -115,7 +99,7 @@ classdef mogdevice < handle
             self.commands = commands;
             self.idx = 1;
             self.state = self.STATE_SEND;
-            self.dev.BytesAvailableFcn = @(src,event) self.handleAsync(src,event);
+            self.dev.configureCallback('terminator',@(src,event) self.handleAsync(src,event));
             self.handleAsync;
         end
         
