@@ -42,7 +42,9 @@ classdef mogdevice < handle
 				if nargin < 3
 					port = 7802;	% default port
 				end
-				self.dev = tcpclient(addr, port,'InputBufferSize',2^20,'OutputBufferSize',2^20);
+				self.dev = tcpclient(addr, port);
+                self.dev.InputBufferSize = 2^20;
+                self.dev.OutputBufferSize = 2^20;
                 self.dev.configureTerminator('CR/LF');
 				addr = sprintf('%s:%d',addr,port);
             end
@@ -74,10 +76,11 @@ classdef mogdevice < handle
 			% receive EXACTLY "n" bytes from the device
             data = char(self.dev.read(n));
 		end
-		function n = send(self, data)
+        function n = send(self, data)
 			% send a string to the device, CRLF-terminate if necessary, and return number of bytes sent
             data = regexprep(data,'\r\n$','');
-			n = self.dev.writeline(data);
+			self.dev.writeline(data);
+            n = length(data);
 		end
 		function n = send_raw(self, data)
 			% send a raw string to the device, and return number of bytes sent
