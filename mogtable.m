@@ -52,9 +52,9 @@ classdef mogtable < handle
                 end
             else
                 %Check times
-    %             if any(diff(self.t) < 1e-6)
-    %                 error('Time steps must be at least 1 us');
-    %             end
+                if any(diff(self.t) < 1e-6)
+                    error('Time steps must be at least 1 us');
+                end
                 %Check frequencies
                 if any(self.freq > 400) || any(self.freq < 10)
                     error('Frequencies must be between [10,400] MHz');
@@ -135,9 +135,10 @@ classdef mogtable < handle
                             % power off value is always included before a
                             % long run of values where the power is too low
                             %
-                            self.dataToWrite(mm+1,:) = [t2(nn),self.POW_OFF_VALUE,f2(nn),ph2(nn)];
-                            mm = mm + 1;
-                            self.sync(nn) = true;
+                            self.dataToWrite(mm + 1,:) = [t2(nn),p2(nn),f2(nn),ph2(nn)];
+                            self.dataToWrite(mm + 2,:) = [t2(nn),self.POW_OFF_VALUE,f2(nn),ph2(nn)];
+                            mm = mm + 2;
+                            self.sync([nn,nn + 1]) = true;
                         elseif p2(nn) >= self.LOW_POW_THRESHOLD
                             self.dataToWrite(mm+1,:) = [t2(nn),p2(nn),f2(nn),ph2(nn)];
                             mm = mm + 1;
@@ -164,6 +165,9 @@ classdef mogtable < handle
                     s = [s tmp];
                 end
             else
+                if strcmpi(self.pow_units,'hex')
+                    self.dataToWrite = [self.t(:),self.pow(:),self.freq(:),self.phase(:)];
+                end
                 dt = diff(self.dataToWrite(:,1));
                 dt = round(dt(:)*1e6);
                 dt(end+1) = 10; %#ok<*NASGU>
@@ -182,12 +186,19 @@ classdef mogtable < handle
                     f = self.dataToWrite(nn,3);
                     p = self.dataToWrite(nn,2);
                     ph = self.dataToWrite(nn,4);
-                    if p > -45
-                        s{nn+4} = sprintf('table,append,%d,%.6f,%.4f,%.6f,%d',...
-                            self.channel,f,p,ph,dt(nn));
-                    else
+                    if strcmpi(self.pow_units,'dbm')
+                        if p > -45
+                            s{nn+4} = sprintf('table,append,%d,%.6f,%.4f,%.6f,%d',...
+                                self.channel,f,p,ph,dt(nn));
+                        else
+                            s{nn+4} = sprintf('table,append,%d,%.6f,0x%04x,%.6f,%d',...
+                                self.channel,f,0,ph,dt(nn));
+                        end
+                    elseif strcmpi(self.pow_units,'hex')
                         s{nn+4} = sprintf('table,append,%d,%.6f,0x%04x,%.6f,%d',...
-                            self.channel,f,0,ph,dt(nn));
+                                self.channel,f,p,ph,dt(nn));
+                    else
+                        error('Power units must be either ''dbm'' or ''hex''');
                     end
                 end
                 s{end - 1} = sprintf('table,arm,%d',self.channel);

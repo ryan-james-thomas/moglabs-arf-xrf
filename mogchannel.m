@@ -76,7 +76,7 @@ classdef mogchannel < handle
         
         function self = check(self)
             %Check frequency
-            if self.freq > 400 || self.freq < 10
+            if self.freq > 400 || self.freq < 20
                 error('Frequency %.6f MHz is out of range!',self.freq);
             end
             %Check power
