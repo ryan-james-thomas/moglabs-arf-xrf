@@ -43,8 +43,13 @@ classdef mogdevice < handle
 					port = 7802;	% default port
 				end
 				self.dev = tcpclient(addr, port);
-                self.dev.InputBufferSize = 2^20;
-                self.dev.OutputBufferSize = 2^20;
+                R = version('-release');
+                release_year = regexp(R,'\d+','match');
+                release_year = str2double(release_year{1});
+                if contains(R,'2022b') || (release_year > 2022)
+                    self.dev.InputBufferSize = 2^20;
+                    self.dev.OutputBufferSize = 2^20;
+                end
                 self.dev.configureTerminator('CR/LF');
 				addr = sprintf('%s:%d',addr,port);
             end
