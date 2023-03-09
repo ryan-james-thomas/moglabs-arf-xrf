@@ -11,7 +11,7 @@
 %
 classdef mogdevice < handle
 	properties
-		dev;		% device selfect
+		dev;		% device object
 		cx = '';	% connection string
     end
     
@@ -114,7 +114,7 @@ classdef mogdevice < handle
         function handleAsync(self,~,~)
             if strcmpi(self.state,self.STATE_SEND)
                 if self.idx <= numel(self.commands)
-                    self.send(self.commands{self.idx});
+                    self.dev.writeline(self.commands{self.idx});
                     self.idx = self.idx + 1;
                     self.state = self.STATE_RECV;
                 else
@@ -122,11 +122,11 @@ classdef mogdevice < handle
                     self.handleAsync;
                 end
             elseif strcmpi(self.state,self.STATE_RECV)
-                [resp,~,err] = fgets(self.dev);
-                if ~isempty(err) || strncmpi(resp(1:end-2),'ERR',3)
+                resp = self.dev.readline();
+                if strncmpi(resp(1:end-2),'ERR',3)
                     self.state = self.STATE_IDLE;
-                    self.dev.BytesAvailableFcn = '';
-                    error(resp(6:end-2));
+                    self.dev.configureCallback('off');
+                    error(resp(6:end));
                 elseif self.idx <= numel(self.commands)
                     self.state = self.STATE_SEND;
                     self.handleAsync;
@@ -135,7 +135,7 @@ classdef mogdevice < handle
                     self.handleAsync;
                 end
             else
-                self.dev.BytesAvailableFcn = '';
+                self.dev.configureCallback('off');
                 t = toc(self.uploadStartTime);
                 fprintf(1,'Table upload complete (%d instructions in %.1f s)\n',self.idx-1,t);
 %                 [R,err] = self.checkClocks;
@@ -143,6 +143,20 @@ classdef mogdevice < handle
 %                     warning('One or more clocks are unlocked: %s',err);
 %                 end
             end
+        end
+
+        function self = blocking_upload(self)
+            self.uploadStartTime = tic;
+            self.idx = 1;
+            for nn = 1:numel(self.commands)
+                self.send(self.commands{nn});
+                resp = self.dev.readline();
+                if strncmpi(resp(1:end-2),'ERR',3)
+                    error(resp(6:end));
+                end
+            end
+            t = toc(self.uploadStartTime);
+            fprintf(1,'Table upload complete (%d instructions in %.1f s)\n',numel(self.commands),t);
         end
         
         function [R,err] = checkClocks(self)
