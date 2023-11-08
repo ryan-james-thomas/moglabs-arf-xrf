@@ -52,8 +52,12 @@ classdef mogtable < handle
                 end
             else
                 %Check times
-                if any(diff(self.t) < 1e-6)
-                    error('Time steps must be at least 1 us');
+                if any(diff(self.t*1e6) < 1)
+                    if ~any(round(diff(self.t*1e6)) < 1)
+                        warning('Some dt values are less than 1 us, but this may be a floating point error');
+                    else
+                        error('Time steps must be at least 1 us');
+                    end
                 end
                 %Check frequencies
                 if any(self.freq > 400) || any(self.freq < 10)
