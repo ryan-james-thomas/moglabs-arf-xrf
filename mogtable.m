@@ -54,7 +54,7 @@ classdef mogtable < handle
                 %Check times
                 if any(diff(self.t*1e6) < 1)
                     if ~any(round(diff(self.t*1e6)) < 1)
-                        warning('Some dt values are less than 1 us, but this may be a floating point error');
+%                         warning('Some dt values are less than 1 us, but this may be a floating point error');
                     else
                         error('Time steps must be at least 1 us');
                     end
@@ -175,6 +175,10 @@ classdef mogtable < handle
                 dt = diff(self.dataToWrite(:,1));
                 dt = round(dt(:)*1e6);
                 dt(end+1) = 10; %#ok<*NASGU>
+                if dt(1) < 2
+                    error('First instruction must be longer than 2 us!');
+                end
+                dt(1) = dt(1) - 2;  %This fixes a 2 us delay in the first instruction
                 N = numel(dt);
                 if N > 8191
                     error('Maximum number of table entries is 8191');
@@ -232,13 +236,15 @@ classdef mogtable < handle
                 mm = 1;
                 for nn = 2:N
                     if nn < N && p2(nn) > 0 && p2(nn + 1) == 0
-                        self.dataToWrite(mm+1,:) = [t2(nn),0,f2(nn),ph2(nn)];
-                        mm = mm + 1;
+                        self.dataToWrite(mm + 1,:) = [t2(nn),p2(nn),f2(nn),ph2(nn)];
+                        self.dataToWrite(mm + 2,:) = [t2(nn),0,f2(nn),ph2(nn)];
+                        mm = mm + 2;
                     elseif p2(nn) > 0
-                        self.dataToWrite(mm+1,:) = [t2(nn),p2(nn),f2(nn),ph2(nn)];
+                        self.dataToWrite(mm + 1,:) = [t2(nn),p2(nn),f2(nn),ph2(nn)];
                         mm = mm + 1;
                     end
-                end                
+                end    
+                self.dataToWrite(end,2) = 0;
             end
         end
         
@@ -266,6 +272,10 @@ classdef mogtable < handle
                 dt = diff(self.dataToWrite(:,1));
                 dt = round(dt(:)*1e6);
                 dt(end+1) = 10;
+                if dt(1) < 2
+                    error('First instruction must be longer than 2 us!');
+                end
+                dt(1) = dt(1) - 2;  %This fixes a 2 us delay in the first instruction
                 x = zeros(4*N,1,'uint32');
                 for nn = 1:N
                     if nn == N
@@ -313,6 +323,7 @@ classdef mogtable < handle
             else
                 x = uint32(x);
             end
+            
             self.parent.cmd('mode,%d,%s',self.channel,self.MODE);
             self.parent.cmd('debounce,%d,off',self.channel);
             self.parent.cmd('table,stop,%d',self.channel);
@@ -321,6 +332,7 @@ classdef mogtable < handle
             self.parent.send_raw(typecast(uint32(x),'uint8'));
             self.parent.cmd('table,arm,%d',self.channel);
             self.parent.cmd('table,rearm,%d,on',self.channel);
+            
         end
         
         function numInstr = upload(self)
