@@ -237,7 +237,7 @@ classdef mogtable < handle
                 for nn = 2:N
                     if nn < N && p2(nn) > 0 && p2(nn + 1) == 0
                         self.dataToWrite(mm + 1,:) = [t2(nn),p2(nn),f2(nn),ph2(nn)];
-                        self.dataToWrite(mm + 2,:) = [t2(nn),0,f2(nn),ph2(nn)];
+                        self.dataToWrite(mm + 2,:) = [t2(nn + 1),0,f2(nn),ph2(nn)];
                         mm = mm + 2;
                     elseif p2(nn) > 0
                         self.dataToWrite(mm + 1,:) = [t2(nn),p2(nn),f2(nn),ph2(nn)];

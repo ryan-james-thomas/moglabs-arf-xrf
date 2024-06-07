@@ -59,7 +59,7 @@ classdef mogdevice < handle
 			% ask the device a query, ensure the response is not "ERR"
 			self.dev.flush('input');
 			self.send(sprintf(varargin{:}));
-			resp = self.recv();
+			resp = char(self.recv());
 			if strncmp(resp,'ERR',3)
 				error(resp(6:end));
             end
